@@ -32,12 +32,13 @@ class TokenService {
       throw Exception('Invalid Token...');
     }
   }
-
+//!TokenPair
   Future<TokenPair> createTokenPair(String userId) async {
     final ts = Provider.of.fetch<TokenSecret>();
     final tokenId = Uuid().v4();
     final aToken = generateJwt(userId, 'http://localhost', ts.getSecretKey,
         jwtId: tokenId);
+        
     const refreshTokenExpiry = Duration(minutes: 5);
     final rToken = generateJwt(userId, 'http://localhost', ts.getSecretKey,
         expiry: refreshTokenExpiry, jwtId: tokenId);
