@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:dart_movie_api/src/extensions/http_ext.dart';
 import 'package:dart_movie_api/src/extensions/parse_ext.dart';
+import 'package:dart_movie_api/src/middlewares/check_login_user_middleware.dart';
 import 'package:dart_movie_api/src/service/password_service.dart';
 import 'package:dart_movie_api/src/service/provider.dart';
 import 'package:dart_movie_api/src/service/token_service.dart';
@@ -25,6 +27,23 @@ class AuthService {
     final rx = Provider.of.fetch<RegexValidator>();
     final ps = Provider.of.fetch<PasswordService>();
     final ts = Provider.of.fetch<TokenService>();
+
+    //! Me Get Request
+    app.get('/me', (Request request) async {
+      final user = request.context['user'];
+      if (user == null) {
+        return Response.badRequest(
+            body: json.encode({'message': 'User Not Found...'}),
+            headers: CustomHeader.json.getType);
+      }
+      return Response.ok(
+          json.encode({
+            'userId': (user as Map<String, dynamic>)['_id'],
+            'email': user['email'],
+          }),
+          headers: CustomHeader.json.getType);
+    });
+
     //! Register POST Request
     app.post("/register", (Request request) async {
       final user = await request.parseData;
@@ -53,7 +72,7 @@ class AuthService {
           json.encode({'message': 'User saved. Please redirect to Login.'}),
           headers: CustomHeader.json.getType);
     });
-
+    //! Login Post Request
     app.post('/login', (Request request) async {
       final user = await request.parseData;
       if (user.email!.isEmpty || user.password!.isEmpty) {
@@ -91,11 +110,56 @@ class AuthService {
         print('Error: $e');
         return Response.internalServerError(
             body: json.encode({
-          'message': 'There was a problem logging you in. Please try again...'
-        }),headers: CustomHeader.json.getType);
+              'message':
+                  'There was a problem logging you in. Please try again...'
+            }),
+            headers: CustomHeader.json.getType);
+      }
+    });
+    //! Logout Post Request
+    app.post('/logout', (Request request) async {
+      final auth = request.context['authDetails'];
+      final currToken = await ts.getToken((auth as JWT).jwtId!);
+      if (currToken == null) {
+        return Response.forbidden(
+            json.encode({'error': 'Not authorized to perform this action'}),
+            headers: CustomHeader.json.getType);
+      }
+      try {
+        await ts.removeToken((auth).jwtId!);
+      } catch (e) {
+        return Response.internalServerError(
+            body: json.encode(
+              {'error': 'There was a problem!'},
+            ),
+            headers: CustomHeader.json.getType);
+      }
+      return Response.ok(json.encode({'message': 'Successfully logged out'}),
+          headers: CustomHeader.json.getType);
+    });
+    //! Delete  Request
+    app.delete('/delete/<userId|.*>', (Request request, String userId) async {
+      try {
+        final user = await store
+            .findOne(where.eq('_id', ObjectId.fromHexString(userId)));
+        if (user != null) {
+          await store
+              .deleteOne(where.eq('_id', ObjectId.fromHexString(userId)));
+          return Response.ok(json.encode({'message': 'User has deleted...'}),
+              headers: CustomHeader.json.getType);
+        }
+        return Response.notFound(json.encode({'message': 'User not found...'}),
+            headers: CustomHeader.json.getType);
+      } catch (e) {
+        return Response.forbidden(
+            json.encode({'error': 'Error deleted user : $e'}),
+            headers: CustomHeader.json.getType);
       }
     });
 
-    return app;
+    final handler =
+        Pipeline().addMiddleware(checkLoginUser(store)).addHandler(app);
+
+    return handler;
   }
 }

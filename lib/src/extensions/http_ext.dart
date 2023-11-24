@@ -8,7 +8,7 @@ extension HttpHeadersX on CustomHeader {
       case CustomHeader.json:
         return {HttpHeaders.contentTypeHeader: ContentType.json.mimeType};
       case CustomHeader.html:
-        return {HttpHeaders.contentTypeHeader: ContentType.html};
+        return {HttpHeaders.contentTypeHeader: 'text/html'};
     }
   }
 }

@@ -28,7 +28,7 @@ class MovieService {
         return Response.ok(
             json.encode({'length': moviesLength, 'movies': allMovies}),
             headers: CustomHeader.json.getType);
-      }on JWTUndefinedException catch (e) {
+      } on JWTUndefinedException catch (e) {
         return Response.badRequest(
             body: json.encode({'error': 'Invalid JWT'}),
             headers: CustomHeader.json.getType);
@@ -56,6 +56,19 @@ class MovieService {
       return Response(HttpStatus.ok,
           body: json
               .encode({'message': 'A film added', 'movie_name': movie.title}),
+          headers: CustomHeader.json.getType);
+    });
+
+    app.delete('/delete/<movieId|.*>',
+        (Request request, String? movieId) async {
+      final movie = await store.findOne(where.eq('movieId', movieId));
+
+      if (movie == null || movieId == null) {
+        return Response.notFound(json.encode({'error': 'Movie not found'}),
+            headers: CustomHeader.json.getType);
+      }
+      await store.deleteOne(where.eq('movieId', movieId));
+      return Response.ok(json.encode({'message': 'Movie was deleted...'}),
           headers: CustomHeader.json.getType);
     });
 

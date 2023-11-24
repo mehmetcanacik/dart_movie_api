@@ -27,11 +27,11 @@ class TokenService {
       final jwt = JWT.verify(token, SecretKey(secret));
       return jwt;
     } on JWTExpiredException {
-      throw JwtCustomException(error:'JWT Expired...');
+      throw JwtCustomException(error: 'JWT Expired...');
     } on JWTInvalidException {
-      throw JwtCustomException(error:'Invalid Token...');
+      throw JwtCustomException(error: 'Invalid Token...');
     } on JWTUndefinedException {
-      throw JwtCustomException(error:'Invalid Length');
+      throw JwtCustomException(error: 'Invalid Length');
     }
   }
 
@@ -52,6 +52,10 @@ class TokenService {
       String tokenId, String aToken, String rToken) async {
     await store
         .insertOne({'tokenId': tokenId, 'aToken': aToken, 'rToken': rToken});
+  }
+
+  Future<Map<String, dynamic>?> getToken(String tokenId) async {
+    return await store.findOne(where.eq('tokenId', tokenId));
   }
 
   Future<dynamic> removeToken(String tokenId) async {
