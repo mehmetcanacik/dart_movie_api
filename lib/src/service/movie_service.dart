@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:dart_movie_api/src/extensions/http_ext.dart';
 import 'package:dart_movie_api/src/middlewares/check_authorization.dart';
 import 'package:dart_movie_api/src/models/movie.dart';
@@ -17,15 +18,21 @@ class MovieService {
     final app = Router();
 
     app.get('/', (Request request) async {
-      final allMovies = await store
-          .find()
-          .map<Movie>((m) => Movie.fromJson(m))
-          .cast<Movie>()
-          .toList();
-      final moviesLength = allMovies.length;
-      return Response.ok(
-          json.encode({'length': moviesLength, 'movies': allMovies}),
-          headers: CustomHeader.json.getType);
+      try {
+        final allMovies = await store
+            .find()
+            .map<Movie>((m) => Movie.fromJson(m))
+            .cast<Movie>()
+            .toList();
+        final moviesLength = allMovies.length;
+        return Response.ok(
+            json.encode({'length': moviesLength, 'movies': allMovies}),
+            headers: CustomHeader.json.getType);
+      }on JWTUndefinedException catch (e) {
+        return Response.badRequest(
+            body: json.encode({'error': 'Invalid JWT'}),
+            headers: CustomHeader.json.getType);
+      }
     });
 
     app.post('/add', (Request request) async {

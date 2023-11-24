@@ -27,18 +27,20 @@ class TokenService {
       final jwt = JWT.verify(token, SecretKey(secret));
       return jwt;
     } on JWTExpiredException {
-      throw Exception('JWT Expired...');
+      throw JwtCustomException(error:'JWT Expired...');
     } on JWTInvalidException {
-      throw Exception('Invalid Token...');
+      throw JwtCustomException(error:'Invalid Token...');
+    } on JWTUndefinedException {
+      throw JwtCustomException(error:'Invalid Length');
     }
   }
-//!TokenPair
+
   Future<TokenPair> createTokenPair(String userId) async {
     final ts = Provider.of.fetch<TokenSecret>();
     final tokenId = Uuid().v4();
     final aToken = generateJwt(userId, 'http://localhost', ts.getSecretKey,
         jwtId: tokenId);
-        
+
     const refreshTokenExpiry = Duration(minutes: 5);
     final rToken = generateJwt(userId, 'http://localhost', ts.getSecretKey,
         expiry: refreshTokenExpiry, jwtId: tokenId);
@@ -55,4 +57,10 @@ class TokenService {
   Future<dynamic> removeToken(String tokenId) async {
     return await store.deleteOne({'tokenId': tokenId});
   }
+}
+
+class JwtCustomException implements Exception {
+  final String error;
+
+  const JwtCustomException({required this.error});
 }
